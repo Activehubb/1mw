@@ -1,45 +1,31 @@
 const express = require("express");
-const mongoose = require("mongoose");
-const app = express();
 const { MongoClient } = require("mongodb");
-
+const app = express();
 const dotenv = require("dotenv");
-const connectDB = require("./db");
 
 dotenv.config({ path: __dirname + "/.env" });
 
-const dbName = process.env.DB_NAME;
 const url = process.env.MONGO_URI;
+async function main() {
+  const client = new MongoClient(url);
 
-connectDB();
-
-app.get("/properties", async (req, res) => {
   try {
-    mongoose.connect(url);
+    await client.connect();
+    console.log("Connected successfully to server");
+    const db = client.db();
+    const collection = db.collection("media_urls");
 
-    const connection = mongoose.connection;
-
-    connection.on("error", console.error.bind(console, "connection error:"));
-    connection.once("open", async function () {
-      const collection = connection.db.collection("media_urls");
-      collection.find({}).toArray(function (err, data) {
-        if (err) {
-          console.log(err);
-        }
-        res.json({
-          result: data,
-          message: "success",
-        });
-        console.log(data); // it will print your collection data
+    app.get("/properties", async (req, res) => {
+      const numberOfResults = Number(req.query.limit) || 100;
+      const result = await collection.find({}).limit(numberOfResults).toArray();
+      res.json({
+        data: result,
+        message: "success",
       });
     });
-  } catch (error) {
-    console.log(error.message);
-  }
-});
 
+    app.listen(5000, () => console.log("listening on port 5000"));
+  } catch (error) {}
+}
 
-
-app.listen(5000, () => {
-  console.log(`Server connected`);
-});
+main();

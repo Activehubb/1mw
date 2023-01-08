@@ -16,16 +16,31 @@ async function main() {
     const collection = db.collection("media_urls");
 
     app.get("/properties", async (req, res) => {
-      const numberOfResults = Number(req.query.limit) || 100;
-      const result = await collection.find({}).limit(numberOfResults).toArray();
+      const resultPerPage = Number(req.query.limit) || 20;
+
+      const currentPage = Number(req.query.page) || 1;
+
+      const skip = resultPerPage * (currentPage - 1);
+
+      const response = await collection
+        .find({})
+        .limit(resultPerPage)
+        .skip(skip)
+        .toArray();
+
+      const responseCounts = await collection.countDocuments();
       res.json({
-        data: result,
+        resultPerPage: resultPerPage,
+        counts: responseCounts,
+        data: response,
         message: "success",
       });
     });
 
     app.listen(5000, () => console.log("listening on port 5000"));
-  } catch (error) {}
+  } catch (error) {
+    console.log(error.message);
+  }
 }
 
 main();
